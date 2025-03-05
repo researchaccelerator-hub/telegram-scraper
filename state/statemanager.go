@@ -41,7 +41,7 @@ func NewStateManager(config Config) (*StateManager, error) {
 	sm := &StateManager{
 		config:       config,
 		listFile:     filepath.Join(config.StorageRoot, "list.txt"),
-		progressFile: filepath.Join(config.StorageRoot, "progress.txt"),
+		progressFile: filepath.Join(config.StorageRoot, "progress", fmt.Sprintf("%s.txt", config.CrawlID)),
 	}
 
 	// Initialize Azure client if we have the credentials
@@ -265,6 +265,12 @@ func (sm *StateManager) LoadProgress() (int, error) {
 		return sm.loadProgressFromBlob()
 	}
 
+	// Ensure progress directory exists
+	progressDir := filepath.Dir(sm.progressFile)
+	if err := os.MkdirAll(progressDir, os.ModePerm); err != nil {
+		return 0, fmt.Errorf("failed to create progress directory: %w", err)
+	}
+
 	// Local file loading
 	if _, err := os.Stat(sm.progressFile); os.IsNotExist(err) {
 		return 0, nil // Start from the beginning if no progress file
@@ -280,6 +286,7 @@ func (sm *StateManager) LoadProgress() (int, error) {
 		return 0, fmt.Errorf("invalid progress format: %w", err)
 	}
 
+	log.Info().Msgf("Loaded progress for crawl '%s': %d", sm.config.CrawlID, progress)
 	return progress, nil
 }
 
@@ -290,8 +297,9 @@ func (sm *StateManager) SaveProgress(index int) error {
 	}
 
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(sm.progressFile), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
+	progressDir := filepath.Dir(sm.progressFile)
+	if err := os.MkdirAll(progressDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create progress directory: %w", err)
 	}
 
 	// Local file saving
@@ -306,6 +314,7 @@ func (sm *StateManager) SaveProgress(index int) error {
 		return fmt.Errorf("failed to write progress: %w", err)
 	}
 
+	log.Info().Msgf("Saved progress for crawl '%s': %d", sm.config.CrawlID, index)
 	return nil
 }
 
@@ -361,6 +370,7 @@ func (sm *StateManager) loadProgressFromBlob() (int, error) {
 		return 0, fmt.Errorf("invalid progress format: %w", err)
 	}
 
+	log.Info().Msgf("Loaded progress for crawl '%s' from Azure: %d", sm.config.CrawlID, progress)
 	return progress, nil
 }
 
@@ -386,7 +396,7 @@ func (sm *StateManager) saveProgressToBlob(index int) error {
 		return fmt.Errorf("failed to upload progress to Azure: %w", err)
 	}
 
-	log.Info().Msgf("Progress saved to Azure: %d", index)
+	log.Info().Msgf("Progress for crawl '%s' saved to Azure: %d", sm.config.CrawlID, index)
 	return nil
 }
 
@@ -631,7 +641,13 @@ func (sm *StateManager) getListBlobPath() string {
 }
 
 func (sm *StateManager) getProgressBlobPath() string {
-	return filepath.Join(sm.config.BlobNameRoot, sm.config.JobID, "progress.txt")
+	// Incorporate crawlID into the progress file path for per-crawl tracking
+	return filepath.Join(
+		sm.config.BlobNameRoot,
+		sm.config.JobID,
+		"progress",
+		fmt.Sprintf("%s.txt", sm.config.CrawlID),
+	)
 }
 
 func (sm *StateManager) getChannelDataBlobPath(channelname string) string {
