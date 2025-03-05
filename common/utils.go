@@ -8,13 +8,16 @@ import (
 
 // Configuration structure
 type CrawlerConfig struct {
-	DaprMode     bool
-	DaprPort     int
-	Concurrency  int
-	Timeout      int
-	UserAgent    string
-	OutputFormat string
-	StorageRoot  string
+	DaprMode         bool
+	DaprPort         int
+	Concurrency      int
+	Timeout          int
+	UserAgent        string
+	OutputFormat     string
+	StorageRoot      string
+	TDLibDatabaseURL string
+	MinPostDate      time.Time
+	DaprJobMode      bool
 }
 
 // GenerateCrawlID generates a unique identifier based on the current timestamp.

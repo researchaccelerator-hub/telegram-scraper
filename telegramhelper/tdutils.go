@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
+	"github.com/researchaccelerator-hub/telegram-scraper/common"
 	"github.com/researchaccelerator-hub/telegram-scraper/crawler"
 	"github.com/researchaccelerator-hub/telegram-scraper/model"
 	"github.com/researchaccelerator-hub/telegram-scraper/state"
@@ -21,6 +22,7 @@ import (
 // TelegramService defines an interface for interacting with the Telegram client
 type TelegramService interface {
 	InitializeClient(storagePrefix string) (crawler.TDLibClient, error)
+	InitializeClientWithConfig(storagePrefix string, cfg common.CrawlerConfig) (crawler.TDLibClient, error)
 	GetMe(libClient crawler.TDLibClient) (*client.User, error)
 }
 
@@ -28,17 +30,20 @@ type TelegramService interface {
 type RealTelegramService struct{}
 
 // InitializeClient sets up a real TDLib client
-func (t *RealTelegramService) InitializeClient(storagePrefix string) (crawler.TDLibClient, error) {
+func (s *RealTelegramService) InitializeClient(storagePrefix string) (crawler.TDLibClient, error) {
+	return s.InitializeClientWithConfig(storagePrefix, common.CrawlerConfig{})
+}
+
+func (s *RealTelegramService) InitializeClientWithConfig(storagePrefix string, cfg common.CrawlerConfig) (crawler.TDLibClient, error) {
 	authorizer := client.ClientAuthorizer()
 	go client.CliInteractor(authorizer)
-	fn := "https://tomb218.sg-host.com/tdlib.tgz"
-	targetDir := storagePrefix + "/state"
-
-	err := downloadAndExtractTarball(fn, targetDir)
-	if err != nil {
-		log.Error().Err(err).Stack().Msg("Error extracting tarball")
-	} else {
-		log.Info().Msg("Extraction completed successfully!")
+	if cfg.TDLibDatabaseURL != "" {
+		if err := downloadAndExtractTarball(cfg.TDLibDatabaseURL, filepath.Join(storagePrefix, "state")); err != nil {
+			log.Warn().Err(err).Msg("Failed to download and extract pre-seeded TDLib database, proceeding with fresh database")
+			// Continue with a fresh database even if download fails
+		} else {
+			log.Info().Msg("Successfully downloaded and extracted pre-seeded TDLib database")
+		}
 	}
 	apiID, err := strconv.Atoi(os.Getenv("TG_API_ID"))
 	if err != nil {
@@ -77,7 +82,11 @@ func (t *RealTelegramService) InitializeClient(storagePrefix string) (crawler.TD
 	}
 
 	log.Warn().Msg("ABOUT TO CONNECT TO TELEGRAM. IF YOUR TG_PHONE_CODE IS INVALID, YOU MUST RE-RUN WITH A VALID CODE.")
-
+	//p := os.Getenv("TG_PHONE_NUMBER")
+	//pc := os.Getenv("TG_PHONE_CODE")
+	//os.Setenv("TG_PHONE_NUMBER", p)
+	//os.Setenv("TG_PHONE_CODE", pc)
+	//authorizer.PhoneNumber <- p
 	clientReady := make(chan *client.Client)
 	errChan := make(chan error)
 

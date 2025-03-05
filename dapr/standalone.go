@@ -1,4 +1,4 @@
-package standalone
+package dapr
 
 import (
 	"github.com/researchaccelerator-hub/telegram-scraper/common"
@@ -19,7 +19,7 @@ import (
 //   - urlFile: A file containing URLs to crawl.
 //   - crawlerCfg: Configuration settings for the crawler.
 //   - generateCode: A flag indicating whether to run code generation.
-func StartStandaloneMode(urlList []string, urlFile string, crawlerCfg common.CrawlerConfig, generateCode bool) {
+func StartDaprStandaloneMode(urlList []string, urlFile string, crawlerCfg common.CrawlerConfig, generateCode bool) {
 	log.Info().Msg("Starting crawler in standalone mode")
 
 	// Collect URLs from command line arguments or file
@@ -93,10 +93,11 @@ func launch(stringList []string, crawlCfg common.CrawlerConfig) {
 	log.Info().Msgf("Starting scraper for crawl: %s", crawlid)
 	cfg := state.Config{
 		StorageRoot:   crawlCfg.StorageRoot,
-		ContainerName: "",
+		ContainerName: crawlid,
 		BlobNameRoot:  "",
 		JobID:         "",
 		CrawlID:       crawlid,
+		DAPREnabled:   crawlCfg.DaprMode,
 	}
 	sm, err := state.NewStateManager(cfg)
 	if err != nil {

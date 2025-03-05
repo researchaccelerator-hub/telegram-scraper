@@ -1,6 +1,7 @@
 package crawl
 
 import (
+	"github.com/researchaccelerator-hub/telegram-scraper/common"
 	"github.com/researchaccelerator-hub/telegram-scraper/crawler"
 	"github.com/researchaccelerator-hub/telegram-scraper/state"
 	"github.com/researchaccelerator-hub/telegram-scraper/telegramhelper"
@@ -9,10 +10,10 @@ import (
 )
 
 // Run connects to a Telegram channel and crawls its messages.
-func Run(crawlID, channelUsername, storagePrefix string, sm state.StateManager) error {
+func Run(crawlID, channelUsername, storagePrefix string, sm state.StateManager, cfg common.CrawlerConfig) error {
 	// Initialize Telegram client
 	service := &telegramhelper.RealTelegramService{}
-	tdlibClient, err := service.InitializeClient(storagePrefix)
+	tdlibClient, err := service.InitializeClientWithConfig(storagePrefix, cfg)
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("Failed to initialize Telegram client")
 		return err

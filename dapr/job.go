@@ -35,7 +35,7 @@ func StartDaprMode(crawlerCfg common2.CrawlerConfig) {
 
 	// Create a new Dapr service
 	port := fmt.Sprintf(":%d", crawlerCfg.DaprPort)
-	server, err := daprs.NewService(":" + port)
+	server, err := daprs.NewService(port)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start server: %v")
 	}
