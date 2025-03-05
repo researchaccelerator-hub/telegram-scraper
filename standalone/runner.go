@@ -122,7 +122,7 @@ func launch(stringList []string, crawlCfg common.CrawlerConfig) {
 				}
 			}()
 
-			if err = crawl.Run(crawlid, item, crawlCfg.StorageRoot, *sm); err != nil {
+			if err = crawl.Run(crawlid, item, crawlCfg.StorageRoot, *sm, crawlCfg); err != nil {
 				log.Error().Stack().Err(err).Msgf("Error processing item %s", item)
 			}
 		}()

@@ -7,6 +7,7 @@ import (
 	"github.com/researchaccelerator-hub/telegram-scraper/standalone"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,6 +20,7 @@ var (
 	urlFile      string
 	generateCode bool
 	crawlType    string
+	minPostDate  string
 )
 
 func main() {
@@ -70,6 +72,17 @@ var rootCmd = &cobra.Command{
 		crawlerCfg.UserAgent = viper.GetString("crawler.useragent")
 		crawlerCfg.OutputFormat = viper.GetString("output.format")
 		crawlerCfg.StorageRoot = viper.GetString("storage.root")
+		minPostDateStr := viper.GetString("crawler.minpostdate")
+		if minPostDateStr != "" {
+			parsedTime, err := time.Parse("2006-01-02", minPostDateStr)
+			if err != nil {
+				return fmt.Errorf("invalid min-post-date format, must be YYYY-MM-DD: %v", err)
+			}
+			crawlerCfg.MinPostDate = parsedTime
+		} else {
+			// Set to zero time if not specified
+			crawlerCfg.MinPostDate = time.Time{}
+		}
 
 		return nil
 	},
@@ -100,6 +113,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&crawlerCfg.UserAgent, "user-agent", "Mozilla/5.0 Crawler", "User agent to use")
 	rootCmd.PersistentFlags().StringVar(&crawlerCfg.OutputFormat, "output", "json", "Output format (json, csv, etc.)")
 	rootCmd.PersistentFlags().StringVar(&crawlerCfg.StorageRoot, "storage-root", "/tmp", "Storage root directory")
+	rootCmd.PersistentFlags().StringVar(&minPostDate, "min-post-date", "", "Minimum post date to crawl (format: YYYY-MM-DD)")
 
 	// Standalone mode specific flags
 	rootCmd.Flags().StringSliceVar(&urlList, "urls", []string{}, "comma-separated list of URLs to crawl")
@@ -115,6 +129,7 @@ func init() {
 	viper.BindPFlag("crawler.useragent", rootCmd.PersistentFlags().Lookup("user-agent"))
 	viper.BindPFlag("output.format", rootCmd.PersistentFlags().Lookup("output"))
 	viper.BindPFlag("storage.root", rootCmd.PersistentFlags().Lookup("storage-root"))
+	viper.BindPFlag("crawler.minpostdate", rootCmd.PersistentFlags().Lookup("min-post-date"))
 	// Add subcommands
 	rootCmd.AddCommand(versionCmd)
 }

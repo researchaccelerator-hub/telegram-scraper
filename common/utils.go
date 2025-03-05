@@ -1,8 +1,6 @@
 package common
 
 import (
-	"github.com/rs/zerolog/log"
-	"strings"
 	"time"
 )
 
@@ -15,6 +13,7 @@ type CrawlerConfig struct {
 	UserAgent    string
 	OutputFormat string
 	StorageRoot  string
+	MinPostDate  time.Time
 }
 
 // GenerateCrawlID generates a unique identifier based on the current timestamp.
@@ -27,19 +26,4 @@ func GenerateCrawlID() string {
 	crawlID := currentTime.Format("20060102150405")
 
 	return crawlID
-}
-
-// parseSeedList parses a command-line flag "seed-list" into a slice of strings.
-// The flag is expected to be a comma-separated list of seed channels.
-// If the flag is not provided, it logs an informational message and returns an empty slice.
-func ParseSeedList(stringList string) []string {
-
-	if stringList == "" {
-		log.Info().Msg("seed-list argument is not provided")
-		return []string{}
-	}
-
-	// Split the string into a slice
-	values := strings.Split(stringList, ",")
-	return values
 }

@@ -1,6 +1,7 @@
 package crawl
 
 import (
+	"github.com/researchaccelerator-hub/telegram-scraper/common"
 	"github.com/researchaccelerator-hub/telegram-scraper/crawler"
 	"github.com/researchaccelerator-hub/telegram-scraper/state"
 	"github.com/researchaccelerator-hub/telegram-scraper/telegramhelper"
@@ -9,7 +10,7 @@ import (
 )
 
 // Run connects to a Telegram channel and crawls its messages.
-func Run(crawlID, channelUsername, storagePrefix string, sm state.StateManager) error {
+func Run(crawlID, channelUsername, storagePrefix string, sm state.StateManager, cfg common.CrawlerConfig) error {
 	// Initialize Telegram client
 	service := &telegramhelper.RealTelegramService{}
 	tdlibClient, err := service.InitializeClient(storagePrefix)
@@ -28,7 +29,7 @@ func Run(crawlID, channelUsername, storagePrefix string, sm state.StateManager) 
 	}
 
 	// Process all messages in the channel
-	err = processAllMessages(tdlibClient, channelInfo, crawlID, channelUsername, sm)
+	err = processAllMessages(tdlibClient, channelInfo, crawlID, channelUsername, sm, cfg)
 	if err != nil {
 		return err
 	}
@@ -182,22 +183,22 @@ func (f *DefaultMessageFetcher) FetchMessages(tdlibClient crawler.TDLibClient, c
 
 type MessageProcessor interface {
 	// ProcessMessage processes a single Telegram message.
-	ProcessMessage(tdlibClient crawler.TDLibClient, message *client.Message, info *channelInfo, crawlID string, channelUsername string, sm *state.StateManager) error
+	ProcessMessage(tdlibClient crawler.TDLibClient, message *client.Message, info *channelInfo, crawlID string, channelUsername string, sm *state.StateManager, cfg common.CrawlerConfig) error
 }
 
 // DefaultMessageProcessor implements the MessageProcessor interface using the default processMessage function
 type DefaultMessageProcessor struct{}
 
 // ProcessMessage implements the MessageProcessor interface
-func (p *DefaultMessageProcessor) ProcessMessage(tdlibClient crawler.TDLibClient, message *client.Message, info *channelInfo, crawlID string, channelUsername string, sm *state.StateManager) error {
-	return processMessage(tdlibClient, message, info, crawlID, channelUsername, *sm)
+func (p *DefaultMessageProcessor) ProcessMessage(tdlibClient crawler.TDLibClient, message *client.Message, info *channelInfo, crawlID string, channelUsername string, sm *state.StateManager, cfg common.CrawlerConfig) error {
+	return processMessage(tdlibClient, message, info, crawlID, channelUsername, *sm, cfg)
 }
 
 // processAllMessages retrieves and processes all messages from a channel
-func processAllMessages(tdlibClient crawler.TDLibClient, info *channelInfo, crawlID, channelUsername string, sm state.StateManager) error {
+func processAllMessages(tdlibClient crawler.TDLibClient, info *channelInfo, crawlID, channelUsername string, sm state.StateManager, cfg common.CrawlerConfig) error {
 	processor := &DefaultMessageProcessor{}
 	fetcher := &DefaultMessageFetcher{}
-	return processAllMessagesWithProcessor(tdlibClient, info, crawlID, channelUsername, sm, processor, fetcher)
+	return processAllMessagesWithProcessor(tdlibClient, info, crawlID, channelUsername, sm, processor, fetcher, cfg)
 }
 
 // processAllMessagesWithProcessor retrieves and processes all messages from a channel.
@@ -211,7 +212,8 @@ func processAllMessagesWithProcessor(
 	channelUsername string,
 	sm state.StateManager,
 	processor MessageProcessor,
-	fetcher MessageFetcher) error {
+	fetcher MessageFetcher,
+	cfg common.CrawlerConfig) error {
 
 	var fromMessageID int64 = 0
 
@@ -230,7 +232,7 @@ func processAllMessagesWithProcessor(
 
 		// Process messages
 		for _, message := range messages {
-			if err := processor.ProcessMessage(tdlibClient, message, info, crawlID, channelUsername, &sm); err != nil {
+			if err := processor.ProcessMessage(tdlibClient, message, info, crawlID, channelUsername, &sm, cfg); err != nil {
 				log.Error().Err(err).Msgf("Error processing message %d", message.Id)
 				continue // Skip to next message on error
 			}
@@ -260,7 +262,7 @@ func fetchMessages(tdlibClient crawler.TDLibClient, chatID int64, fromMessageID 
 }
 
 // processMessage processes a single message
-func processMessage(tdlibClient crawler.TDLibClient, message *client.Message, info *channelInfo, crawlID, channelUsername string, sm state.StateManager) error {
+func processMessage(tdlibClient crawler.TDLibClient, message *client.Message, info *channelInfo, crawlID, channelUsername string, sm state.StateManager, cfg common.CrawlerConfig) error {
 	// Get detailed message info
 	detailedMessage, err := tdlibClient.GetMessage(&client.GetMessageRequest{
 		MessageId: message.Id,
@@ -294,6 +296,7 @@ func processMessage(tdlibClient crawler.TDLibClient, message *client.Message, in
 		channelUsername,
 		tdlibClient,
 		sm,
+		cfg,
 	)
 
 	if err != nil {
